@@ -102,6 +102,7 @@ override CFILES := $(filter %.c,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
 override NASMFILES := $(filter %.asm,$(SRCFILES))
 override OBJ := $(addprefix obj/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o) $(NASMFILES:.asm=.asm.o))
+override OBJ += obj/font.o
 override HEADER_DEPS := $(addprefix obj/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
 
 # Default target. This must come first, before header dependencies.
@@ -131,6 +132,10 @@ obj/%.asm.o: %.asm GNUmakefile
 	mkdir -p "$(dir $@)"
 	nasm $(NASMFILES) $< -o $@
 
+# font.psf からオブジェクトファイルを生成
+obj/font.o: font.psf GNUmakefile
+	mkdir -p "$(dir $@)"
+	$(LD) -m elf_x86_64 -r -b binary -o $@ $<
 
 
 limine-binary/limine:

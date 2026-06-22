@@ -20,3 +20,11 @@ void fb_put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     volatile uint32_t *fb = fb_address;
     fb[y * (fb_pitch / 4) + x] = color;
 }
+
+uint32_t fb_get_width(void) {
+    return fb_width;
+}
+
+uint32_t fb_get_height(void) {
+    return fb_height;
+}

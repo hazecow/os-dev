@@ -4,6 +4,8 @@
 #include <limine.h>
 
 #include "frame_buffer.h"
+#include "font.h"
+#include "console.h"
 
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
@@ -89,20 +91,38 @@ void kmain(void) {
 
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
     fb_init(framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch);
+
+    // 黒背景にオレンジで Hello, low-level world! と文字描画する
     for (size_t y = 0; y < framebuffer->height; y++) {
         for (size_t x = 0; x < framebuffer->width; x++) {
-            uint32_t nX = x * 255 / framebuffer->width;
-            uint32_t nY = y * 255 / framebuffer->height;
-            fb_put_pixel(x, y, (nY << 8) | nX);
+            fb_put_pixel(x, y, 0x000000);
         }
     }
-
-    // 画面の左上1/4だけ赤で上塗りする
-    for (size_t y = 0; y < framebuffer->height / 2; y++) {
-        for (size_t x = 0; x < framebuffer->width / 2; x++) {
-            fb_put_pixel(x, y, 0x00FF0000);
-        }
-    }
+    font_init();
+    console_init();
+    console_putchar('H', 0xFFA500, 0x000000);
+    console_putchar('e', 0xFFA500, 0x000000);
+    console_putchar('l', 0xFFA500, 0x000000);
+    console_putchar('l', 0xFFA500, 0x000000);
+    console_putchar('o', 0xFFA500, 0x000000);
+    console_putchar(',', 0xFFA500, 0x000000);
+    console_putchar(' ', 0xFFA500, 0x000000);
+    console_putchar('l', 0xFFA500, 0x000000);
+    console_putchar('o', 0xFFA500, 0x000000);
+    console_putchar('w', 0xFFA500, 0x000000);
+    console_putchar('-', 0xFFA500, 0x000000);
+    console_putchar('l', 0xFFA500, 0x000000);
+    console_putchar('e', 0xFFA500, 0x000000);
+    console_putchar('v', 0xFFA500, 0x000000);
+    console_putchar('e', 0xFFA500, 0x000000);
+    console_putchar('l', 0xFFA500, 0x000000);
+    console_putchar(' ', 0xFFA500, 0x000000);
+    console_putchar('w', 0xFFA500, 0x000000);
+    console_putchar('o', 0xFFA500, 0x000000);
+    console_putchar('r', 0xFFA500, 0x000000);
+    console_putchar('l', 0xFFA500, 0x000000);
+    console_putchar('d', 0xFFA500, 0x000000);
+    console_putchar('!', 0xFFA500, 0x000000);
 
     hcf();
 }
