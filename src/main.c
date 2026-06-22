@@ -92,7 +92,7 @@ void kmain(void) {
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
     fb_init(framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch);
 
-    // 黒背景にオレンジで Hello, low-level world! と文字描画する
+    // 黒背景に文字列を複数行描画する
     for (size_t y = 0; y < framebuffer->height; y++) {
         for (size_t x = 0; x < framebuffer->width; x++) {
             fb_put_pixel(x, y, 0x000000);
@@ -100,29 +100,10 @@ void kmain(void) {
     }
     font_init();
     console_init();
-    console_putchar('H', 0xFFA500, 0x000000);
-    console_putchar('e', 0xFFA500, 0x000000);
-    console_putchar('l', 0xFFA500, 0x000000);
-    console_putchar('l', 0xFFA500, 0x000000);
-    console_putchar('o', 0xFFA500, 0x000000);
-    console_putchar(',', 0xFFA500, 0x000000);
-    console_putchar(' ', 0xFFA500, 0x000000);
-    console_putchar('l', 0xFFA500, 0x000000);
-    console_putchar('o', 0xFFA500, 0x000000);
-    console_putchar('w', 0xFFA500, 0x000000);
-    console_putchar('-', 0xFFA500, 0x000000);
-    console_putchar('l', 0xFFA500, 0x000000);
-    console_putchar('e', 0xFFA500, 0x000000);
-    console_putchar('v', 0xFFA500, 0x000000);
-    console_putchar('e', 0xFFA500, 0x000000);
-    console_putchar('l', 0xFFA500, 0x000000);
-    console_putchar(' ', 0xFFA500, 0x000000);
-    console_putchar('w', 0xFFA500, 0x000000);
-    console_putchar('o', 0xFFA500, 0x000000);
-    console_putchar('r', 0xFFA500, 0x000000);
-    console_putchar('l', 0xFFA500, 0x000000);
-    console_putchar('d', 0xFFA500, 0x000000);
-    console_putchar('!', 0xFFA500, 0x000000);
-
+    console_puts("Hello, low-layer world!\n", 0xFFA500, 0x000000); 
+    console_puts("Line 2\n", 0xAAFF00, 0x000000);
+    console_puts("Line 3\nLine 4\n", 0x00AAFF, 0x000000);
+    console_puts("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.", 0xFF00FF, 0x000000);
+    
     hcf();
 }

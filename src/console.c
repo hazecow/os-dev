@@ -50,6 +50,13 @@ void console_putchar(uint32_t c, uint32_t fg, uint32_t bg) {
     }
 }
 
+void console_puts(const char *str, uint32_t fg, uint32_t bg) {
+    while (*str) {
+        console_putchar(*str, fg, bg);
+        str++;
+    }
+}
+
 static void newline(void) {
     cursor_x = 0;
     cursor_y++;
