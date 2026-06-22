@@ -4,8 +4,8 @@
 #include "font.h"
 #include "frame_buffer.h"
 
-#define PRINTK_FG 0xFFFFFF
-#define PRINTK_BG 0x000000
+#define KPRINT_FG 0xFFFFFF
+#define KPRINT_BG 0x000000
 
 static uint32_t cursor_x = 0;
 static uint32_t cursor_y = 0;
@@ -132,13 +132,13 @@ static void vsprintf(char *buf, const char *fmt, va_list args) {
     *p = '\0';
 }
 
-void printk(const char *fmt, ...) {
+void kprint(const char *fmt, ...) {
     static char buf[1024];
     va_list args;
     va_start(args, fmt);
     vsprintf(buf, fmt, args);
     va_end(args);
-    console_puts(buf, PRINTK_FG, PRINTK_BG);
+    console_puts(buf, KPRINT_FG, KPRINT_BG);
 }
 
 static void newline(void) {

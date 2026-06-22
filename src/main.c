@@ -95,14 +95,14 @@ void kmain(void) {
     font_init();
     console_init();
 
-    printk("Hello, %s!\n", "world");
-    printk("int: %d\n", 42);
-    printk("negative: %d\n", -42);
-    printk("hex: %x\n", 255);
-    printk("char: %c\n", 'A');
-    printk("pointer: %p\n", (void *)0xdeadbeef);
-    printk("percent: 100%%\n");
-    printk("zero: %d\n", 0);
+    kprint("Hello, %s!\n", "world");
+    kprint("int: %d\n", 42);
+    kprint("negative: %d\n", -42);
+    kprint("hex: %x\n", 255);
+    kprint("char: %c\n", 'A');
+    kprint("pointer: %p\n", (void *)0xdeadbeef);
+    kprint("percent: 100%%\n");
+    kprint("zero: %d\n", 0);
         
     hcf();
 }
