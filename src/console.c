@@ -1,10 +1,17 @@
+#include <stdarg.h>
+
 #include "console.h"
 #include "font.h"
 #include "frame_buffer.h"
 
+#define PRINTK_FG 0xFFFFFF
+#define PRINTK_BG 0x000000
+
 static uint32_t cursor_x = 0;
 static uint32_t cursor_y = 0;
 static void newline(void);
+static void itoa(char *buf, uint64_t n, uint32_t base);
+static void vsprintf(char *buf, const char *fmt, va_list args);
 
 void console_init(void) {
     cursor_x = 0;
@@ -57,7 +64,108 @@ void console_puts(const char *str, uint32_t fg, uint32_t bg) {
     }
 }
 
+static void vsprintf(char *buf, const char *fmt, va_list args) {
+    char tmp[64];
+    char *p = buf;
+
+    while (*fmt) {
+        if (*fmt != '%') {
+            *p++ = *fmt++;
+            continue;
+        }
+
+        fmt++; // '%' を読み飛ばす
+        switch (*fmt) {
+            case 's': {
+                const char *s = va_arg(args, const char *);
+                while (*s) {
+                    *p++ = *s++;
+                }
+                break;
+            }
+            case 'd': {
+                // n < 0 であることもあるため int (32bit) で受ける
+                // フォーマット指定子が対応する型と va_arg で読み取る型は一致させなければならない
+                int n = va_arg(args, int);
+                if (n < 0) {
+                    *p++ = '-';
+                    itoa(tmp, (uint64_t)(-(int64_t)n), 10);
+                } else {
+                    itoa(tmp, (uint64_t)n, 10);
+                }
+                for (char *t = tmp; *t; t++) {
+                    *p++ = *t;
+                }
+                break;
+            }
+            case 'x': {
+                unsigned int n = va_arg(args, unsigned int);
+                itoa(tmp, n, 16);
+                for (char *t = tmp; *t; t++) {
+                    *p++ = *t;
+                }
+                break;
+            }
+            case 'c': {
+                // va_arg に char を指定すると int に拡張される
+                // int で受けてから必要に応じて char にキャストする
+                *p++ = (char)va_arg(args, int);
+                break;
+            }
+            case 'p': {
+                uint64_t n = (uint64_t)va_arg(args, void *);
+                *p++ = '0';
+                *p++ = 'x';
+                itoa(tmp, n, 16);
+                for (char *t = tmp; *t; t++) {
+                    *p++ = *t;
+                }
+                break;
+            }
+            case '%': {
+                *p++ = '%';
+                break;
+            }
+        }
+        fmt++;
+    }
+    *p = '\0';
+}
+
+void printk(const char *fmt, ...) {
+    static char buf[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(buf, fmt, args);
+    va_end(args);
+    console_puts(buf, PRINTK_FG, PRINTK_BG);
+}
+
 static void newline(void) {
     cursor_x = 0;
     cursor_y++;
+}
+
+static void itoa(char *buf, uint64_t n, uint32_t base) {
+    static const char digits[] = "0123456789abcdef";
+    char tmp[64];
+    uint32_t i = 0;
+
+    if (n == 0) {
+        buf[0] = '0';
+        buf[1] = '\0';
+        return;
+    }
+
+    // base でべき乗展開したときの係数を下位桁から求める
+    while (n > 0) {
+        tmp[i++] = digits[n % base];
+        n /= base;
+    }
+
+    // 逆順に並べる
+    for (uint32_t j = 0; j < i; j++) {
+        buf[j] = tmp[i - j - 1];
+    }
+    buf[i] = '\0';
 }
