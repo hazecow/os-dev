@@ -6,6 +6,7 @@
 #include "frame_buffer.h"
 #include "font.h"
 #include "console.h"
+#include "gdt.h"
 
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
@@ -95,6 +96,12 @@ void kmain(void) {
     font_init();
     console_init();
 
+    // GDT が適切に設定されているかのテスト
+    gdt_init();
+    gdt_dump();
+    gdtr_verify();
+
+    // クラッシュせずに続けて画面出力できるかのテスト
     kprint("Hello, %s!\n", "world");
     kprint("int: %d\n", 42);
     kprint("negative: %d\n", -42);

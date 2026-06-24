@@ -130,7 +130,7 @@ obj/%.S.o: %.S GNUmakefile
 # Compilation rules for *.asm files.
 obj/%.asm.o: %.asm GNUmakefile
 	mkdir -p "$(dir $@)"
-	nasm $(NASMFILES) $< -o $@
+	nasm $(NASMFLAGS) $< -o $@
 
 # font.psf からオブジェクトファイルを生成
 obj/font.o: font.psf GNUmakefile
