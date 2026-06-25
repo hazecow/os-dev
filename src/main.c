@@ -7,6 +7,7 @@
 #include "font.h"
 #include "console.h"
 #include "gdt.h"
+#include "idt.h"
 
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
@@ -96,20 +97,16 @@ void kmain(void) {
     font_init();
     console_init();
 
-    // GDT が適切に設定されているかのテスト
     gdt_init();
-    gdt_dump();
-    gdtr_verify();
+    kprint("[OK] GDT initialized\n");
 
-    // クラッシュせずに続けて画面出力できるかのテスト
-    kprint("Hello, %s!\n", "world");
-    kprint("int: %d\n", 42);
-    kprint("negative: %d\n", -42);
-    kprint("hex: %x\n", 255);
-    kprint("char: %c\n", 'A');
-    kprint("pointer: %p\n", (void *)0xdeadbeef);
-    kprint("percent: 100%%\n");
-    kprint("zero: %d\n", 0);
-        
+    idt_init();
+    kprint("[OK] IDT initialized\n");
+
+    // 動作確認：意図的に #UD を起こす
+    __asm__ volatile ("ud2");
+
+    kprint("cannot reach here\n");
+
     hcf();
 }
