@@ -71,7 +71,8 @@ override CFLAGS += \
 	-mno-sse \
 	-mno-sse2 \
 	-mno-red-zone \
-	-mcmodel=kernel
+	-mcmodel=kernel \
+	-masm=intel
 
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
@@ -171,7 +172,8 @@ run-bios: image
 run-uefi: edk2-ovmf-bins image
 	qemu-system-x86_64 \
 		-drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-x86_64.fd,readonly=on \
-		-cdrom image.iso
+		-cdrom image.iso \
+		-serial file:serial.log
 
 .PHONY: clean
 clean:

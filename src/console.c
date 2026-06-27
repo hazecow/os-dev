@@ -3,6 +3,7 @@
 #include "console.h"
 #include "font.h"
 #include "frame_buffer.h"
+#include "serial.h"
 
 #define KPRINT_FG 0xFFFFFF
 #define KPRINT_BG 0x000000
@@ -139,6 +140,7 @@ void kprint(const char *fmt, ...) {
     vsprintf(buf, fmt, args);
     va_end(args);
     console_puts(buf, KPRINT_FG, KPRINT_BG);
+    serial_write_string(buf);
 }
 
 static void newline(void) {

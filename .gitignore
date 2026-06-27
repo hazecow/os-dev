@@ -4,3 +4,4 @@
 /edk2-ovmf-bins
 *.iso
 *.psf
+*.log

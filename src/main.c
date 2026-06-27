@@ -8,6 +8,8 @@
 #include "console.h"
 #include "gdt.h"
 #include "idt.h"
+#include "memory.h"
+#include "serial.h"
 
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
@@ -15,6 +17,12 @@ static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
+    .revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST_ID,
     .revision = 0
 };
 
@@ -86,27 +94,36 @@ void kmain(void) {
         hcf();
     }
 
+    // setup framebuffer
     if (framebuffer_request.response == NULL
         || framebuffer_request.response->framebuffer_count < 1) {
         hcf();
     }
-
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
     fb_init(framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch);
 
+    // setup font and console
     font_init();
     console_init();
+    // kprint はこれ以降使用可能
+    kprint("[OK] Console initialized\n");
 
+    // setup GDT
     gdt_init();
     kprint("[OK] GDT initialized\n");
 
+    // setup IDT
     idt_init();
     kprint("[OK] IDT initialized\n");
 
-    // 動作確認：意図的に #UD を起こす
-    __asm__ volatile ("ud2");
-
-    kprint("cannot reach here\n");
+    // setup memory
+    serial_init();
+    serial_write_string("[OK] Serial port initialized\n");
+    if (memmap_request.response == NULL
+        || memmap_request.response->entry_count < 1) {
+        hcf();
+    }
+    display_memmap(memmap_request.response);
 
     hcf();
 }
