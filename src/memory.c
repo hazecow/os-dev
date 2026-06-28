@@ -17,11 +17,13 @@ void display_memmap(struct limine_memmap_response *response) {
     kprint("=== MEMMAP ===\n");    
 
     for(uint64_t i = 0; i < response->entry_count; i++) {
-        struct limine_memmap_entry *entry 
-            = (struct limine_memmap_entry *)response->entries[i];
+        struct limine_memmap_entry *entry = response->entries[i];
+        const char *type_name = (entry->type < sizeof(memmap_type_names) / sizeof(memmap_type_names[0]))
+            ? memmap_type_names[entry->type] : "UNKNOWN";
+
         kprint(
-            "base=0x%x, length=0x%x, type=%s\n", 
-            entry->base, entry->length, memmap_type_names[entry->type]
+            "base=0x%lx, length=0x%lx, type=%s\n", 
+            entry->base, entry->length, type_name
         );
     }
 }

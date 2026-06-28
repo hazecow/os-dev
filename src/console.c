@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <stdbool.h>
 
 #include "console.h"
 #include "font.h"
@@ -76,6 +77,14 @@ static void vsprintf(char *buf, const char *fmt, va_list args) {
         }
 
         fmt++; // '%' を読み飛ばす
+
+        // 'l' がついていたら long フラグを立てる
+        bool is_long = false;
+        if (*fmt == 'l') {
+            is_long = true;
+            fmt++;
+        }
+
         switch (*fmt) {
             case 's': {
                 const char *s = va_arg(args, const char *);
@@ -85,14 +94,24 @@ static void vsprintf(char *buf, const char *fmt, va_list args) {
                 break;
             }
             case 'd': {
-                // n < 0 であることもあるため int (32bit) で受ける
+                // n < 0 であることもあるため 符号付き整数 で受ける
                 // フォーマット指定子が対応する型と va_arg で読み取る型は一致させなければならない
-                int n = va_arg(args, int);
-                if (n < 0) {
-                    *p++ = '-';
-                    itoa(tmp, (uint64_t)(-(int64_t)n), 10);
+                if (is_long) {
+                    long n = va_arg(args, long);
+                    if (n < 0) {
+                        *p++ = '-';
+                        itoa(tmp, (uint64_t)(-(int64_t)n), 10);
+                    } else {
+                        itoa(tmp, (uint64_t)n, 10);
+                    }
                 } else {
-                    itoa(tmp, (uint64_t)n, 10);
+                    int n = va_arg(args, int);
+                    if (n < 0) {
+                        *p++ = '-';
+                        itoa(tmp, (uint64_t)(-(int64_t)n), 10);
+                    } else {
+                        itoa(tmp, (uint64_t)n, 10);
+                    }
                 }
                 for (char *t = tmp; *t; t++) {
                     *p++ = *t;
@@ -100,8 +119,13 @@ static void vsprintf(char *buf, const char *fmt, va_list args) {
                 break;
             }
             case 'x': {
-                unsigned int n = va_arg(args, unsigned int);
-                itoa(tmp, n, 16);
+                if (is_long) {
+                    unsigned long n = va_arg(args, unsigned long);
+                    itoa(tmp, n, 16);
+                } else {
+                    unsigned int n = va_arg(args, unsigned int);
+                    itoa(tmp, n, 16);
+                }
                 for (char *t = tmp; *t; t++) {
                     *p++ = *t;
                 }
