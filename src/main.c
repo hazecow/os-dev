@@ -11,6 +11,9 @@
 #include "memory.h"
 #include "serial.h"
 
+__attribute__((aligned(16)))
+uint8_t g_kernel_stack[16 * 1024];
+
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
 
@@ -98,6 +101,11 @@ void kmain(void) {
     void *p3 = pmm_alloc();
     kprint("p3 = 0x%lx\n", (uint64_t)p3);
     // 今の割り当て方なら p3 == p1 になるはず
+
+    // RSP がカーネルのスタックに指し変わっているかチェック
+    uint64_t rsp;
+    __asm__ volatile ("mov %[rd], rsp" : [rd] "=r"(rsp));
+    kprint("RSP = 0x%lx\n", rsp);
 
     hcf();
 }
