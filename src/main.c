@@ -14,6 +14,7 @@
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
 
+
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
@@ -26,62 +27,18 @@ static volatile struct limine_memmap_request memmap_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST_ID,
+    .revision = 0
+};
+
+
 __attribute__((used, section(".limine_requests_start")))
 static volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
 
 __attribute__((used, section(".limine_requests_end")))
 static volatile uint64_t limine_requests_end_marker[] = LIMINE_REQUESTS_END_MARKER;
-
-void *memcpy(void *restrict dest, const void *restrict src, size_t n) {
-    uint8_t *restrict pdest = dest;
-    const uint8_t *restrict psrc = src;
-
-    for (size_t i = 0; i < n; i++) {
-        pdest[i] = psrc[i];
-    }
-
-    return dest;
-}
-
-void *memset(void *s, int c, size_t n) {
-    uint8_t *p = s;
-
-    for (size_t i = 0; i < n; i++) {
-        p[i] = (uint8_t)c;
-    }
-
-    return s;
-}
-
-void *memmove(void *dest, const void *src, size_t n) {
-    uint8_t *pdest = dest;
-    const uint8_t *psrc = src;
-
-    if((uintptr_t)src > (uintptr_t)dest) {
-        for (size_t i = 0; i < n; i++) {
-            pdest[i] = psrc[i];
-        }
-    } else if ((uintptr_t)src < (uintptr_t)dest) {
-        for (size_t i = n; i > 0; i--) {
-            pdest[i-1] = psrc[i-1];
-        }
-    }
-
-    return dest;
-}
-
-int memcmp(const void *s1, const void *s2, size_t n) {
-    const uint8_t *p1 = s1;
-    const uint8_t *p2 = s2;
-
-    for (size_t i = 0; i < n; i++) {
-        if (p1[i] != p2[i]) {
-            return p1[i] < p2[i] ? -1 : 1;
-        }
-    }
-
-    return 0;
-}
 
 static void hcf(void) {
     for (;;) {
@@ -116,14 +73,31 @@ void kmain(void) {
     idt_init();
     kprint("[OK] IDT initialized\n");
 
-    // setup memory
+    // setup serial port
     serial_init();
     serial_write_string("[OK] Serial port initialized\n");
+
+    // setup memory
     if (memmap_request.response == NULL
         || memmap_request.response->entry_count < 1) {
         hcf();
     }
     display_memmap(memmap_request.response);
+    if (hhdm_request.response == NULL) {
+        hcf();
+    }
+    pmm_init(memmap_request.response, hhdm_request.response->offset);    
+    pmm_dump_stats();
+
+    // メモリ割り当てと解放のテスト
+    void *p1 = pmm_alloc();
+    void *p2 = pmm_alloc();
+    kprint("p1 = 0x%lx\n", (uint64_t)p1);
+    kprint("p2 = 0x%lx\n", (uint64_t)p2);
+    pmm_free(p1);
+    void *p3 = pmm_alloc();
+    kprint("p3 = 0x%lx\n", (uint64_t)p3);
+    // 今の割り当て方なら p3 == p1 になるはず
 
     hcf();
 }
