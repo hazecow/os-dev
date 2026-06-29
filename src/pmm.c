@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-#include "memory.h"
+#include "pmm.h"
 #include "console.h"
 #include "panic.h"
 #include "string.h"
