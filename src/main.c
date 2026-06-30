@@ -8,8 +8,9 @@
 #include "console.h"
 #include "gdt.h"
 #include "idt.h"
-#include "memory.h"
 #include "serial.h"
+#include "pmm.h"
+#include "vmm.h"
 
 __attribute__((aligned(16)))
 uint8_t g_kernel_stack[16 * 1024];
@@ -36,6 +37,11 @@ static volatile struct limine_hhdm_request hhdm_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_executable_address_request exe_addr_request = {
+    .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
+    .revision = 0
+};
 
 __attribute__((used, section(".limine_requests_start")))
 static volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
@@ -91,21 +97,10 @@ void kmain(void) {
     }
     pmm_init(memmap_request.response, hhdm_request.response->offset);    
     pmm_dump_stats();
-
-    // メモリ割り当てと解放のテスト
-    void *p1 = pmm_alloc();
-    void *p2 = pmm_alloc();
-    kprint("p1 = 0x%lx\n", (uint64_t)p1);
-    kprint("p2 = 0x%lx\n", (uint64_t)p2);
-    pmm_free(p1);
-    void *p3 = pmm_alloc();
-    kprint("p3 = 0x%lx\n", (uint64_t)p3);
-    // 今の割り当て方なら p3 == p1 になるはず
-
-    // RSP がカーネルのスタックに指し変わっているかチェック
-    uint64_t rsp;
-    __asm__ volatile ("mov %[rd], rsp" : [rd] "=r"(rsp));
-    kprint("RSP = 0x%lx\n", rsp);
+    kprint("[OK] PMM initialized\n");
+    vmm_init(exe_addr_request.response, memmap_request.response);
+    pmm_dump_stats();
+    kprint("[OK] VMM initialized\n");
 
     hcf();
 }

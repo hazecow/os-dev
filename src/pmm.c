@@ -5,10 +5,8 @@
 #include "panic.h"
 #include "string.h"
 
-#define PAGE_FRAME_SIZE_BYTE 4096
-
 static uint8_t *g_bitmap;
-static uint64_t g_hhdm_offset;
+uint64_t g_hhdm_offset;
 static uint64_t g_bitmap_size_byte;
 
 static const char *memmap_type_names[] = {
