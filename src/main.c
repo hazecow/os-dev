@@ -12,6 +12,10 @@
 #include "pmm.h"
 #include "vmm.h"
 
+extern uint8_t _rodata_start[];
+extern uint8_t _rodata_end[];
+static const char test_str[] = "hello";
+
 __attribute__((aligned(16)))
 uint8_t g_kernel_stack[16 * 1024];
 
@@ -101,6 +105,15 @@ void kmain(void) {
     vmm_init(exe_addr_request.response, memmap_request.response);
     pmm_dump_stats();
     kprint("[OK] VMM initialized\n");
+
+    // .rodata への書き込みテスト
+    // ページフォルトが起こるはず
+    // volatile 修飾子を付けることでわざとコンパイラの最適化を抑制する
+    volatile char *p = (volatile char *)test_str;
+    vmm_dump_entry((uint64_t)p);
+    kprint("Attempting to write to .rodata at 0x%lx\n", (uint64_t)p);
+    *p = 'H';
+    kprint("This line should not be reached\n");
 
     hcf();
 }

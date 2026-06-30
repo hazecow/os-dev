@@ -26,21 +26,31 @@ SECTIONS
     _kernel_start = .;
 
     /* Define a section to contain the Limine requests and assign it to its own PHDR */
+    _limine_requests_start = .;
+
     .limine_requests : {
         KEEP(*(.limine_requests_start))
         KEEP(*(.limine_requests))
         KEEP(*(.limine_requests_end))
     } :limine_requests
 
+    _limine_requests_end = .;
+
     /* Move to the next memory page for .text */
     . = ALIGN(CONSTANT(MAXPAGESIZE));
+
+    _text_start = .;
 
     .text : {
         *(.text .text.*)
     } :text
 
+    _text_end = .;
+
     /* Move to the next memory page for .rodata */
     . = ALIGN(CONSTANT(MAXPAGESIZE));
+
+    _rodata_start = .;
 
     .rodata : {
         *(.rodata .rodata.*)
@@ -52,8 +62,12 @@ SECTIONS
         *(.note.gnu.build-id)
     } :rodata
 
+    _rodata_end = .;
+
     /* Move to the next memory page for .data */
     . = ALIGN(CONSTANT(MAXPAGESIZE));
+
+    _data_start = .;
 
     .data : {
         *(.data .data.*)
@@ -67,6 +81,8 @@ SECTIONS
         *(.bss .bss.*)
         *(COMMON)
     } :data
+
+    _data_end = .;
 
     _kernel_end = .;
 

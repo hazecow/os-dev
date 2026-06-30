@@ -20,6 +20,16 @@
 
 extern uint8_t _kernel_start[];
 extern uint8_t _kernel_end[];
+extern uint8_t _limine_requests_start[];
+extern uint8_t _limine_requests_end[];
+extern uint8_t _text_start[];
+extern uint8_t _text_end[];
+extern uint8_t _rodata_start[];
+extern uint8_t _rodata_end[];
+extern uint8_t _data_start[];
+extern uint8_t _data_end[];
+
+static uint64_t *g_pml4_vaddr; 
 
 /** 
  * 各インデックスを計算
@@ -113,8 +123,8 @@ void vmm_init(
 ) {
     // pmm_alloc() で PML4 を1ページフレーム確保してゼロクリア
     uint64_t pml4_paddr = (uint64_t)pmm_alloc();
-    void *pml4_vaddr = paddr_to_vaddr(pml4_paddr);
-    memset(pml4_vaddr, 0, PAGE_FRAME_SIZE_BYTE);
+    g_pml4_vaddr = (uint64_t *)paddr_to_vaddr(pml4_paddr);
+    memset(g_pml4_vaddr, 0, PAGE_FRAME_SIZE_BYTE);
 
     // HHDM 全体をマップ
     for (uint64_t i = 0; i < memmap_response->entry_count; i++) {
@@ -123,7 +133,7 @@ void vmm_init(
             uint64_t region_size = entry->length;
             for (uint64_t offset = 0; offset < region_size; offset += PAGE_FRAME_SIZE_BYTE) {
                 vmm_map(
-                    (uint64_t *)pml4_vaddr,
+                    g_pml4_vaddr,
                     (uint64_t)paddr_to_vaddr(entry->base + offset),
                     entry->base + offset,
                     PAGE_PRESENT | PAGE_RW
@@ -135,14 +145,95 @@ void vmm_init(
     // カーネル自身をマップ
     uint64_t kernel_size_byte = (uint64_t)_kernel_end - (uint64_t)_kernel_start;
     for (uint64_t offset = 0; offset < kernel_size_byte; offset += PAGE_FRAME_SIZE_BYTE) {
-        vmm_map(
-            (uint64_t *)pml4_vaddr,
-            exe_addr_response->virtual_base + offset,
-            exe_addr_response->physical_base + offset,
-            PAGE_PRESENT | PAGE_RW
-        );
+        // limine_requests: RW
+        if (
+            (uint64_t)_limine_requests_start <= exe_addr_response->virtual_base + offset &&
+            exe_addr_response->virtual_base + offset < (uint64_t)_limine_requests_end
+        ) {
+            vmm_map(
+                g_pml4_vaddr,
+                exe_addr_response->virtual_base + offset,
+                exe_addr_response->physical_base + offset,
+                PAGE_PRESENT | PAGE_RW | PAGE_NX
+            );
+        } 
+        // text: RX
+        else if (
+            (uint64_t)_text_start <= exe_addr_response->virtual_base + offset &&
+            exe_addr_response->virtual_base + offset < (uint64_t)_text_end
+        ) {
+            vmm_map(
+                g_pml4_vaddr,
+                exe_addr_response->virtual_base + offset,
+                exe_addr_response->physical_base + offset,
+                PAGE_PRESENT
+            );
+        }
+        // rodata: RO
+        else if (
+            (uint64_t)_rodata_start <= exe_addr_response->virtual_base + offset &&
+            exe_addr_response->virtual_base + offset < (uint64_t)_rodata_end
+        ) {
+            vmm_map(
+                g_pml4_vaddr,
+                exe_addr_response->virtual_base + offset,
+                exe_addr_response->physical_base + offset,
+                PAGE_PRESENT | PAGE_NX
+            );
+        }
+        // data: RW
+        else if (
+            (uint64_t)_data_start <= exe_addr_response->virtual_base + offset &&
+            exe_addr_response->virtual_base + offset < (uint64_t)_data_end
+        ) {
+            vmm_map(
+                g_pml4_vaddr,
+                exe_addr_response->virtual_base + offset,
+                exe_addr_response->physical_base + offset,
+                PAGE_PRESENT | PAGE_RW | PAGE_NX
+            );
+        }
+        // その他: RWX
+        else {
+            vmm_map(
+                g_pml4_vaddr,
+                exe_addr_response->virtual_base + offset,
+                exe_addr_response->physical_base + offset,
+                PAGE_PRESENT | PAGE_RW
+            );
+        }
     }
 
     // CR3 に PML4 の物理アドレスをセットして切り替え
     __asm__ volatile ("mov cr3, %[pml4]" : : [pml4] "r"(pml4_paddr));
+}
+
+void vmm_dump_entry(uint64_t vaddr) {
+    uint64_t pml4_index = PML4_INDEX(vaddr);
+    if (!(g_pml4_vaddr[pml4_index] & PAGE_PRESENT)) {
+        kprint("PML4E not present\n");
+        return;
+    }
+
+    uint64_t *pdpt = (uint64_t *)paddr_to_vaddr(g_pml4_vaddr[pml4_index] & PAGE_PADDR_MASK);
+    uint64_t pdpt_index = PDPT_INDEX(vaddr);
+    if (!(pdpt[pdpt_index] & PAGE_PRESENT)) {
+        kprint("PDPTE not present\n");
+        return;
+    }
+
+    uint64_t *pd = (uint64_t *)paddr_to_vaddr(pdpt[pdpt_index] & PAGE_PADDR_MASK);
+    uint64_t pd_index = PD_INDEX(vaddr);
+    if (!(pd[pd_index] & PAGE_PRESENT)) {
+        kprint("PDE not present\n");
+        return;
+    }
+    if (pd[pd_index] & PAGE_HUGE) {
+        kprint("PDE (huge) = 0x%lx\n", pd[pd_index]);
+        return;
+    }
+
+    uint64_t *pt = (uint64_t *)paddr_to_vaddr(pd[pd_index] & PAGE_PADDR_MASK);
+    uint64_t pt_index = PT_INDEX(vaddr);
+    kprint("PTE = 0x%lx\n", pt[pt_index]);
 }

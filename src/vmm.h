@@ -13,3 +13,5 @@ void vmm_init(
     struct limine_executable_address_response *exe_addr_response,
     struct limine_memmap_response *memmap_response
 );
+
+void vmm_dump_entry(uint64_t vaddr);
