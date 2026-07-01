@@ -14,7 +14,6 @@
 
 extern uint8_t _rodata_start[];
 extern uint8_t _rodata_end[];
-static const char test_str[] = "hello";
 
 __attribute__((aligned(16)))
 uint8_t g_kernel_stack[16 * 1024];
@@ -95,25 +94,25 @@ void kmain(void) {
         || memmap_request.response->entry_count < 1) {
         hcf();
     }
-    display_memmap(memmap_request.response);
     if (hhdm_request.response == NULL) {
         hcf();
     }
     pmm_init(memmap_request.response, hhdm_request.response->offset);    
-    pmm_dump_stats();
     kprint("[OK] PMM initialized\n");
-    vmm_init(exe_addr_request.response, memmap_request.response);
-    pmm_dump_stats();
+    uint64_t *pml4 = vmm_init(exe_addr_request.response, memmap_request.response);
     kprint("[OK] VMM initialized\n");
+    heap_init(pml4);
+    kprint("[OK] Heap initialized\n");
 
-    // .rodata への書き込みテスト
-    // ページフォルトが起こるはず
-    // volatile 修飾子を付けることでわざとコンパイラの最適化を抑制する
-    volatile char *p = (volatile char *)test_str;
-    vmm_dump_entry((uint64_t)p);
-    kprint("Attempting to write to .rodata at 0x%lx\n", (uint64_t)p);
-    *p = 'H';
-    kprint("This line should not be reached\n");
+    // kmalloc の動作確認
+    void *p1 = kmalloc(16);
+    void *p2 = kmalloc(16);
+    void *p3 = kmalloc(1);
+    void *p4 = kmalloc(16);
+    kprint("p1 = 0x%lx\n", (uint64_t)p1);
+    kprint("p2 = 0x%lx\n", (uint64_t)p2);
+    kprint("p3 = 0x%lx\n", (uint64_t)p3);
+    kprint("p4 = 0x%lx\n", (uint64_t)p4);
 
     hcf();
 }

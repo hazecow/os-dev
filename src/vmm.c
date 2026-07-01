@@ -29,8 +29,6 @@ extern uint8_t _rodata_end[];
 extern uint8_t _data_start[];
 extern uint8_t _data_end[];
 
-static uint64_t *g_pml4_vaddr; 
-
 /** 
  * 各インデックスを計算
  * PML4 → PDPT → PD → PT の順に辿る
@@ -117,14 +115,14 @@ static bool hhdm_mappable(struct limine_memmap_entry *entry) {
  * カーネルのページテーブルを初期化する
  * 仮定：4 KiB ページ only
  */
-void vmm_init(
+uint64_t *vmm_init(
     struct limine_executable_address_response *exe_addr_response,
     struct limine_memmap_response *memmap_response
 ) {
     // pmm_alloc() で PML4 を1ページフレーム確保してゼロクリア
     uint64_t pml4_paddr = (uint64_t)pmm_alloc();
-    g_pml4_vaddr = (uint64_t *)paddr_to_vaddr(pml4_paddr);
-    memset(g_pml4_vaddr, 0, PAGE_FRAME_SIZE_BYTE);
+    uint64_t *pml4_vaddr = (uint64_t *)paddr_to_vaddr(pml4_paddr);
+    memset((void *)pml4_vaddr, 0, PAGE_FRAME_SIZE_BYTE);
 
     // HHDM 全体をマップ
     for (uint64_t i = 0; i < memmap_response->entry_count; i++) {
@@ -133,7 +131,7 @@ void vmm_init(
             uint64_t region_size = entry->length;
             for (uint64_t offset = 0; offset < region_size; offset += PAGE_FRAME_SIZE_BYTE) {
                 vmm_map(
-                    g_pml4_vaddr,
+                    pml4_vaddr,
                     (uint64_t)paddr_to_vaddr(entry->base + offset),
                     entry->base + offset,
                     PAGE_PRESENT | PAGE_RW
@@ -151,7 +149,7 @@ void vmm_init(
             exe_addr_response->virtual_base + offset < (uint64_t)_limine_requests_end
         ) {
             vmm_map(
-                g_pml4_vaddr,
+                pml4_vaddr,
                 exe_addr_response->virtual_base + offset,
                 exe_addr_response->physical_base + offset,
                 PAGE_PRESENT | PAGE_RW | PAGE_NX
@@ -163,7 +161,7 @@ void vmm_init(
             exe_addr_response->virtual_base + offset < (uint64_t)_text_end
         ) {
             vmm_map(
-                g_pml4_vaddr,
+                pml4_vaddr,
                 exe_addr_response->virtual_base + offset,
                 exe_addr_response->physical_base + offset,
                 PAGE_PRESENT
@@ -175,7 +173,7 @@ void vmm_init(
             exe_addr_response->virtual_base + offset < (uint64_t)_rodata_end
         ) {
             vmm_map(
-                g_pml4_vaddr,
+                pml4_vaddr,
                 exe_addr_response->virtual_base + offset,
                 exe_addr_response->physical_base + offset,
                 PAGE_PRESENT | PAGE_NX
@@ -187,7 +185,7 @@ void vmm_init(
             exe_addr_response->virtual_base + offset < (uint64_t)_data_end
         ) {
             vmm_map(
-                g_pml4_vaddr,
+                pml4_vaddr,
                 exe_addr_response->virtual_base + offset,
                 exe_addr_response->physical_base + offset,
                 PAGE_PRESENT | PAGE_RW | PAGE_NX
@@ -196,7 +194,7 @@ void vmm_init(
         // その他: RWX
         else {
             vmm_map(
-                g_pml4_vaddr,
+                pml4_vaddr,
                 exe_addr_response->virtual_base + offset,
                 exe_addr_response->physical_base + offset,
                 PAGE_PRESENT | PAGE_RW
@@ -206,16 +204,18 @@ void vmm_init(
 
     // CR3 に PML4 の物理アドレスをセットして切り替え
     __asm__ volatile ("mov cr3, %[pml4]" : : [pml4] "r"(pml4_paddr));
+
+    return (uint64_t *)pml4_vaddr;
 }
 
-void vmm_dump_entry(uint64_t vaddr) {
+void vmm_dump_entry(uint64_t *pml4, uint64_t vaddr) {
     uint64_t pml4_index = PML4_INDEX(vaddr);
-    if (!(g_pml4_vaddr[pml4_index] & PAGE_PRESENT)) {
+    if (!(pml4[pml4_index] & PAGE_PRESENT)) {
         kprint("PML4E not present\n");
         return;
     }
 
-    uint64_t *pdpt = (uint64_t *)paddr_to_vaddr(g_pml4_vaddr[pml4_index] & PAGE_PADDR_MASK);
+    uint64_t *pdpt = (uint64_t *)paddr_to_vaddr(pml4[pml4_index] & PAGE_PADDR_MASK);
     uint64_t pdpt_index = PDPT_INDEX(vaddr);
     if (!(pdpt[pdpt_index] & PAGE_PRESENT)) {
         kprint("PDPTE not present\n");
