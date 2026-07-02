@@ -1,42 +1,27 @@
 bits 64
 section .text
 
-; C ハンドラの宣言（isr.c で定義）
-extern isr_handler
+; C ハンドラの宣言（interrupt.c で定義）
+extern interrupt_handler
 
-; isr.h で参照できるようエクスポート
-global isr_stub_0
-global isr_stub_6
-global isr_stub_8
-global isr_stub_13
-global isr_stub_14
-
-; エラーコードなし
-isr_stub_0:
-    push qword 0        ; ダミーエラーコード
-    push qword 0        ; ベクタ番号
+; エラーコードなしスタブを生成するマクロ
+%macro ISR_NO_ERROR 1
+global isr_stub_%1
+isr_stub_%1:
+    push qword 0     ; ダミーエラーコード
+    push qword %1    ; ベクタ番号
     jmp isr_common
+%endmacro
 
-; エラーコードなし
-isr_stub_6:
-    push qword 0        ; ダミーエラーコード
-    push qword 6        ; ベクタ番号
+; エラーコードありスタブを生成するマクロ
+%macro ISR_ERROR 1
+global isr_stub_%1
+isr_stub_%1:
+    push qword %1    ; ベクタ番号
     jmp isr_common
+%endmacro
 
-; エラーコードあり（CPU が積む）
-isr_stub_8:
-    push qword 8        ; ベクタ番号
-    jmp isr_common
 
-; エラーコードあり（CPU が積む）
-isr_stub_13:
-    push qword 13        ; ベクタ番号
-    jmp isr_common
-
-; エラーコードあり（CPU が積む）
-isr_stub_14:
-    push qword 14        ; ベクタ番号
-    jmp isr_common
 
 isr_common:
     ; 汎用レジスタをすべて積む（System V AMD64 ABI）
@@ -59,7 +44,7 @@ isr_common:
     ; RSP を第一引数として C ハンドラに渡す
     ; レジスタ情報を積み上げて作成した interrupt stack frame へのポインタを渡す
     mov rdi, rsp
-    call isr_handler
+    call interrupt_handler
 
     ; レジスタを復元
     pop r15
@@ -84,3 +69,15 @@ isr_common:
     ; CPU が ISR 呼び出し前にスタックに積んだ RIP, CS, RFLAGS を復元して 
     ; 割り込み発生時の処理に return する
     iretq
+
+
+
+; isr_stub を追加するときは以下に追加する
+
+ISR_NO_ERROR 0      ; #DE, division error
+ISR_NO_ERROR 6      ; #UD, invalid opcode
+ISR_ERROR    8      ; #DF, double fault
+ISR_ERROR    13     ; #GP, general protection fault
+ISR_ERROR    14     ; #PF, page fault
+ISR_NO_ERROR 255    ; spurious interrupt
+ISR_NO_ERROR 32     ; LAPIC timer

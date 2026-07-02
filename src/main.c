@@ -7,10 +7,11 @@
 #include "font.h"
 #include "console.h"
 #include "gdt.h"
-#include "idt.h"
+#include "interrupt.h"
 #include "serial.h"
 #include "pmm.h"
 #include "vmm.h"
+#include "heap.h"
 
 extern uint8_t _rodata_start[];
 extern uint8_t _rodata_end[];
@@ -82,7 +83,7 @@ void kmain(void) {
     kprint("[OK] GDT initialized\n");
 
     // setup IDT
-    idt_init();
+    interrupt_init();
     kprint("[OK] IDT initialized\n");
 
     // setup serial port
