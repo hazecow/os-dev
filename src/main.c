@@ -12,6 +12,7 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "heap.h"
+#include "apic.h"
 
 extern uint8_t _rodata_start[];
 extern uint8_t _rodata_end[];
@@ -105,15 +106,10 @@ void kmain(void) {
     heap_init(pml4);
     kprint("[OK] Heap initialized\n");
 
-    // kmalloc の動作確認
-    void *p1 = kmalloc(16);
-    void *p2 = kmalloc(16);
-    void *p3 = kmalloc(1);
-    void *p4 = kmalloc(16);
-    kprint("p1 = 0x%lx\n", (uint64_t)p1);
-    kprint("p2 = 0x%lx\n", (uint64_t)p2);
-    kprint("p3 = 0x%lx\n", (uint64_t)p3);
-    kprint("p4 = 0x%lx\n", (uint64_t)p4);
+    // APIC の動作確認
+    apic_init(pml4);
+    // IF フラグの有効化
+    __asm__ volatile ("sti");
 
     hcf();
 }
