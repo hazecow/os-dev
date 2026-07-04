@@ -13,6 +13,8 @@
 #include "vmm.h"
 #include "heap.h"
 #include "apic.h"
+#include "acpi.h"
+#include "ps2.h"
 
 extern uint8_t _rodata_start[];
 extern uint8_t _rodata_end[];
@@ -47,6 +49,13 @@ static volatile struct limine_executable_address_request exe_addr_request = {
     .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
     .revision = 0
 };
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_rsdp_request rsdp_request = {
+    .id = LIMINE_RSDP_REQUEST_ID,
+    .revision = 0
+};
+
 
 __attribute__((used, section(".limine_requests_start")))
 static volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
@@ -106,8 +115,14 @@ void kmain(void) {
     heap_init(pml4);
     kprint("[OK] Heap initialized\n");
 
-    // APIC の動作確認
-    apic_init(pml4);
+    // タイマ割込みの設定
+    lapic_init(pml4);
+
+    // キーボード割込みの設定
+    acpi_init(rsdp_request.response, pml4);
+    ioapic_init();
+    ps2_init();    
+
     // IF フラグの有効化
     __asm__ volatile ("sti");
 

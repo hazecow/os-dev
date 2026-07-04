@@ -81,3 +81,4 @@ ISR_ERROR    13     ; #GP, general protection fault
 ISR_ERROR    14     ; #PF, page fault
 ISR_NO_ERROR 255    ; spurious interrupt
 ISR_NO_ERROR 32     ; LAPIC timer
+ISR_NO_ERROR 33     ; PS/2 keyboard

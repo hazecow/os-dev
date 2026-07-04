@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include <stdbool.h>
 
 #include "console.h"
@@ -6,14 +5,10 @@
 #include "frame_buffer.h"
 #include "serial.h"
 
-#define KPRINT_FG 0xFFFFFF
-#define KPRINT_BG 0x000000
-
 static uint32_t cursor_x = 0;
 static uint32_t cursor_y = 0;
 static void newline(void);
 static void itoa(char *buf, uint64_t n, uint32_t base);
-static void vsprintf(char *buf, const char *fmt, va_list args);
 
 void console_init(void) {
     cursor_x = 0;
@@ -66,7 +61,7 @@ void console_puts(const char *str, uint32_t fg, uint32_t bg) {
     }
 }
 
-static void vsprintf(char *buf, const char *fmt, va_list args) {
+void vsprintf(char *buf, const char *fmt, va_list args) {
     char tmp[64];
     char *p = buf;
 

@@ -173,7 +173,8 @@ run-uefi: edk2-ovmf-bins image
 	qemu-system-x86_64 \
 		-drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-x86_64.fd,readonly=on \
 		-cdrom image.iso \
-		-serial file:serial.log
+		-serial file:serial.log \
+		-monitor stdio
 
 .PHONY: clean
 clean:
