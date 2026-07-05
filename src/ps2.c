@@ -20,11 +20,11 @@ void ps2_init(void) {
     inb(0x60);
 
     // controller config byte を設定する
-    // interrupt (bit 0), translation (bit 6) をクリアして無効化し 
+    // interrupt (bit 0) をクリアして無効化し 
     // clock signal (bit 4) をクリアして有効化する 
     outb(0x64, 0x20);
     uint8_t config = inb(0x60);
-    config &= ~(0x01 | 0x10 | 0x40);
+    config &= ~(0x01 | 0x10);
     outb(0x64, 0x60);
     outb(0x60, config);
 
@@ -40,7 +40,6 @@ void ps2_init(void) {
     // 0xA8 を送って second port を有効化し、config byte の bit 5 を確認する
     // bit 5 がクリアなら dual channel である
     // その場合、0xA7 で再度無効化ののち bit 1, 5 をクリアし、second port の interrupt を無効化、clock を有効化する
-    // translation は second port ではサポートされていないので何かする必要はない
     bool is_dual_channel = false;
     outb(0x64, 0xa8);
     outb(0x64, 0x20);
@@ -124,5 +123,15 @@ void ps2_init(void) {
         config |= 0x02;
         outb(0x64, 0x60);
         outb(0x60, config);
+    }
+
+    // スキャンコード変換有効か確認
+    outb(0x64, 0x20);
+    ps2_wait_output();
+    config = inb(0x60);
+    if (config & 0x40) {
+        kprint("scancode translation enabled\n");
+    } else {
+        kprint("scancode translation disabled\n");
     }
 }
