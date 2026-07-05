@@ -15,6 +15,9 @@
 #include "apic.h"
 #include "acpi.h"
 #include "ps2.h"
+#include "keyboard.h"
+#include "event_queue.h"
+#include "layout_jis.h"
 
 extern uint8_t _rodata_start[];
 extern uint8_t _rodata_end[];
@@ -126,5 +129,19 @@ void kmain(void) {
     // IF フラグの有効化
     __asm__ volatile ("sti");
 
-    hcf();
+    // キー入力のテスト
+    key_event_t event;
+    char out;
+    for (;;) {
+        if (key_queue_pop(&event)) {
+            if (keycode_to_char_jis(event.code, keyboard_is_shift_pressed(), &out)) {
+                if (event.released) {
+                    kprint("key %c released\n", out);
+                }
+                else {
+                    kprint("key %c pressed\n", out);
+                }
+            }
+        }
+    }
 }
