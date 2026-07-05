@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdbool.h>
 
 #include "pmm.h"
 #include "vmm.h"
@@ -45,6 +46,7 @@
 extern void isr_stub_255(void);
 extern void isr_stub_32(void);
 extern void isr_stub_33(void);
+extern void keyboard_handler(interrupt_frame_t *frame);
 
 static uint64_t g_lapic_base_paddr;
 static uint64_t g_lapic_base_vaddr;
@@ -110,7 +112,7 @@ static void measure_lapic_timer_freq(void) {
 
 static void lvt_timer_handler(interrupt_frame_t *frame) {
     (void)frame;
-    kprint("APIC timer: time out!\n");
+    //kprint("APIC timer: time out!\n");
     lapic_send_eoi();
 }
 
@@ -132,16 +134,6 @@ static void set_lvt_timer(void) {
 }
 
 void lapic_init(uint64_t *pml4) {
-    // PIC を 0x20/0x28 にリマップして全マスク
-    outb(0x20, 0x11); outb(0xa0, 0x11); // ICW1: init
-    outb(0x21, 0x20); outb(0xa1, 0x28); // ICW2: vector offset
-    outb(0x21, 0x04); outb(0xa1, 0x02); // ICW3: cascade
-    outb(0x21, 0x01); outb(0xa1, 0x01); // ICW4: 8086 mode
-    outb(0x21, 0xff); outb(0xa1, 0xff); // マスク全て
-    // PIC の pending をクリア
-    outb(0x20, 0x20); // master PIC EOI
-    outb(0xa0, 0x20); // slave PIC EOI
-
     // Local APIC base address をマッピングする
     // メモリ属性が UC (PAT3) になるように設定する (PAT=0, PCD=1, PWT=1)
     g_lapic_base_paddr = get_lapic_base();
@@ -213,14 +205,6 @@ void ioapic_redirect(uint8_t irq, uint8_t vector) {
     );
 }
 
-static void keyboard_handler(interrupt_frame_t *frame) {
-    (void)frame;
-    uint8_t scancode = inb(0x60);
-    (void)scancode;
-    kprint("key!\n");
-    lapic_send_eoi();
-}
-
 /**
  * この関数が呼ばれるより先に acpi_init() が呼ばれているので、
  * 既に I/O APIC のマッピングは完了していることが保証される
@@ -228,7 +212,7 @@ static void keyboard_handler(interrupt_frame_t *frame) {
 void ioapic_init(void) {
     // IRQ1 を vector 33 に紐づけ
     ioapic_redirect(1, 33);
-    // 仮ハンドラ登録
+    // ハンドラ登録
     interrupt_register(33, (uintptr_t)isr_stub_33, keyboard_handler);
 }
 
