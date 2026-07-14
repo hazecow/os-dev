@@ -5,3 +5,4 @@
 *.iso
 *.psf
 *.log
+*.clangd
