@@ -125,5 +125,28 @@ void kmain(void) {
   fb_draw_rect(rect2, 0xffff00);
   fb_draw_rect(rect3, 0xff88c8);
 
+  event_message_t msg;
+  for (;;) {
+    if (event_queue_pop(&msg)) {
+      switch (msg.type) {
+      case KEY_PRESSED: {
+        char c;
+        if (keycode_to_char_jis(msg.arg.kbd.kc, keyboard_is_shift_pressed(),
+                                &c)) {
+          if (msg.arg.kbd.released) {
+            kprint("%c\n", c);
+          }
+        }
+        break;
+      }
+      case TIMER_TIMEOUT: {
+        kprint("LAPIC timer: timeout!\n");
+        // blink に置き換える
+        break;
+      }
+      }
+    }
+  }
+
   hcf();
 }

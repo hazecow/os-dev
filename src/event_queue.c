@@ -1,30 +1,26 @@
-#include <stdbool.h>
 #include "event_queue.h"
+#include <stdbool.h>
 
-#define KEY_QUEUE_SIZE 32
+#define EVENT_QUEUE_SIZE 32
 
-// キーイベントを管理するキュー型リングバッファ
-static key_event_t g_key_queue[KEY_QUEUE_SIZE];
+static event_message_t g_event_queue[EVENT_QUEUE_SIZE];
 static volatile size_t g_head = 0;
 static volatile size_t g_tail = 0;
 
-// ハンドラ側（生産者）
-void key_queue_push(keycode_t kc, bool released) {
-    size_t next = (g_head + 1) % KEY_QUEUE_SIZE;
-    if (next == g_tail) {
-        return; // 満杯、古いイベントを守るため破棄（設計次第）
-    }
-    g_key_queue[g_head].code = kc;
-    g_key_queue[g_head].released = released;
-    g_head = next;
+void event_queue_push(event_message_t msg) {
+  size_t next = (g_head + 1) % EVENT_QUEUE_SIZE;
+  if (next == g_tail) {
+    return; // 満杯のときは push しない
+  }
+  g_event_queue[g_head] = msg;
+  g_head = next;
 }
 
-// メインループ側（消費者）
-bool key_queue_pop(key_event_t *out) {
-    if (g_head == g_tail) {
-        return false; // 空
-    }
-    *out = g_key_queue[g_tail];
-    g_tail = (g_tail + 1) % KEY_QUEUE_SIZE;
-    return true;
+bool event_queue_pop(event_message_t *msg) {
+  if (g_head == g_tail) {
+    return false; // 空
+  }
+  *msg = g_event_queue[g_tail];
+  g_tail = (g_tail + 1) % EVENT_QUEUE_SIZE;
+  return true;
 }
