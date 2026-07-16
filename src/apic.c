@@ -4,7 +4,6 @@
 
 #include "acpi.h"
 #include "apic.h"
-#include "console.h"
 #include "event_queue.h"
 #include "interrupt.h"
 #include "io.h"
@@ -150,7 +149,6 @@ void lapic_init(uint64_t *pml4) {
 
   // APIC タイマーの周波数を測定する
   measure_lapic_timer_freq();
-  kprint("APIC timer freq: %d\n", g_lapic_freq);
 
   // LVT Timer を Periodic モードで設定してアンマスクする
   set_lvt_timer();

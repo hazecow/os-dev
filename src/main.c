@@ -134,14 +134,13 @@ void kmain(void) {
         if (keycode_to_char_jis(msg.arg.kbd.kc, keyboard_is_shift_pressed(),
                                 &c)) {
           if (msg.arg.kbd.released) {
-            kprint("%c\n", c);
+            kprint("%c", c);
           }
         }
         break;
       }
       case TIMER_TIMEOUT: {
-        kprint("LAPIC timer: timeout!\n");
-        // blink に置き換える
+        blink_cursor();
         break;
       }
       }
