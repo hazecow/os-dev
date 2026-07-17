@@ -106,6 +106,11 @@ void kmain(void) {
   uint64_t *pml4 = vmm_init(exe_addr_request.response, memmap_request.response);
   heap_init(pml4);
 
+  // setup src buffer
+  void *srcbuf_addr = kmalloc((uint64_t)sizeof(uint32_t) * framebuffer->width *
+                              framebuffer->height);
+  srcbuf_init(srcbuf_addr);
+
   // タイマ割込みの設定
   lapic_init(pml4);
 
@@ -118,9 +123,9 @@ void kmain(void) {
   __asm__ volatile("sti");
 
   // 画面描画
-  rect_t rect1 = {.x = 300, .y = 200, .width = 100, .height = 100};
-  rect_t rect2 = {.x = 300, .y = 300, .width = 100, .height = 100};
-  rect_t rect3 = {.x = 400, .y = 200, .width = 300, .height = 400};
+  rect_t rect1 = {.p.x = 300, .p.y = 200, .width = 100, .height = 100};
+  rect_t rect2 = {.p.x = 300, .p.y = 300, .width = 100, .height = 100};
+  rect_t rect3 = {.p.x = 400, .p.y = 200, .width = 300, .height = 400};
   fb_draw_rect(rect1, 0x0070ff);
   fb_draw_rect(rect2, 0xffff00);
   fb_draw_rect(rect3, 0xff88c8);

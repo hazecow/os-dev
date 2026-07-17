@@ -10,6 +10,8 @@ static uint32_t g_cursor_x;
 static uint32_t g_cursor_y;
 static uint32_t g_glyph_width;
 static uint32_t g_glyph_height;
+static uint32_t g_cursor_cols;
+static uint32_t g_cursor_rows;
 static bool g_cursor_visible;
 
 void console_init(void) {
@@ -20,11 +22,28 @@ void console_init(void) {
   // g_cursor_width, g_cursor_height はフォントの width, height に合わせる
   g_glyph_width = font_get_width();
   g_glyph_height = font_get_height();
+
+  g_cursor_cols = fb_get_width() / g_glyph_width;
+  g_cursor_rows = fb_get_height() / g_glyph_height;
+}
+
+static void hide_cursor(void) {
+  if (g_cursor_visible) {
+    blink_cursor();
+  }
+}
+
+static void show_cursor(void) {
+  if (!g_cursor_visible) {
+    blink_cursor();
+  }
 }
 
 static void newline(void) {
+  hide_cursor();
   g_cursor_x = 0;
   g_cursor_y++;
+  show_cursor();
 }
 
 static void itoa(char *buf, uint64_t n, uint32_t base) {
@@ -51,10 +70,30 @@ static void itoa(char *buf, uint64_t n, uint32_t base) {
   buf[i] = '\0';
 }
 
-void console_putchar(uint32_t c, uint32_t fg, uint32_t bg) {
-  uint32_t cursor_cols = fb_get_width() / g_glyph_width;
-  uint32_t cursor_rows = fb_get_height() / g_glyph_height;
+static void scroll(void) {
+  hide_cursor();
 
+  rect_t src = {.p.x = 0,
+                .p.y = g_glyph_height,
+                .width = fb_get_width(),
+                .height = g_glyph_height * (g_cursor_rows - 1)};
+  point_t dst = {.x = 0, .y = 0};
+  fb_copy_rect(src, dst);
+
+  // コンソールの最終行以下の領域を背景色で塗りつぶす
+  rect_t rect = {.p.x = 0,
+                 .p.y = g_glyph_height * (g_cursor_rows - 1),
+                 .width = fb_get_width(),
+                 .height =
+                     fb_get_height() - g_glyph_height * (g_cursor_rows - 1)};
+  fb_draw_rect(rect, KPRINT_BG);
+
+  g_cursor_y--;
+
+  show_cursor();
+}
+
+void console_putchar(uint32_t c, uint32_t fg, uint32_t bg) {
   if (c == '\n') {
     newline();
   } else {
@@ -78,13 +117,13 @@ void console_putchar(uint32_t c, uint32_t fg, uint32_t bg) {
     }
 
     g_cursor_x++;
-    if (g_cursor_x >= cursor_cols) {
+    if (g_cursor_x >= g_cursor_cols) {
       newline();
     }
   }
 
-  if (g_cursor_y >= cursor_rows) {
-    g_cursor_y = 0;
+  if (g_cursor_y >= g_cursor_rows) {
+    scroll();
   }
 }
 
@@ -197,23 +236,17 @@ void kprint(const char *fmt, ...) {
   serial_write_string(buf);
 }
 
-bool is_g_cursor_visible() { return g_cursor_visible; }
+bool is_cursor_visible(void) { return g_cursor_visible; }
 
-void blink_cursor() {
+void blink_cursor(void) {
   g_cursor_visible = !g_cursor_visible;
-  rect_t cursor_rect = {.x = g_cursor_x * g_glyph_width,
-                        .y = g_cursor_y * g_glyph_height,
+  rect_t cursor_rect = {.p.x = g_cursor_x * g_glyph_width,
+                        .p.y = g_cursor_y * g_glyph_height,
                         .width = g_glyph_width,
                         .height = g_glyph_height};
   if (g_cursor_visible) {
     fb_draw_rect(cursor_rect, KPRINT_FG);
   } else {
     fb_draw_rect(cursor_rect, KPRINT_BG);
-  }
-}
-
-void hide_cursor() {
-  if (g_cursor_visible) {
-    blink_cursor();
   }
 }

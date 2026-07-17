@@ -124,9 +124,9 @@ static void set_lvt_timer(void) {
   interrupt_register(32, (uintptr_t)isr_stub_32, lvt_timer_handler);
 
   // Initial Counter Register を動作周波数に合わせる
-  // 1秒ごとにタイマ割り込み処理が発生することを期待
+  // 0.5 秒ごとにタイマ割り込み処理が発生することを期待
   lapic_write(DIV_CONFIG_OFFSET, (uint32_t)APIC_DIVISION_RATIO_16);
-  lapic_write(INIT_COUNT_OFFSET, g_lapic_freq);
+  lapic_write(INIT_COUNT_OFFSET, g_lapic_freq / 2);
 
   // LVT Timer レジスタをセットする
   uint32_t lvt_timer_reg_value = ((uint32_t)0b01 << 17) | // timer: periodic
